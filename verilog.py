@@ -1,3 +1,5 @@
+import math
+
 from component import ComponentSpec
 
 
@@ -107,7 +109,7 @@ def template(args):
     // ADDR_LSB = 2 for 32 bits (n downto 2)
     // ADDR_LSB = 3 for 64 bits (n downto 3)
     localparam integer ADDR_LSB = (C_S_AXI_DATA_WIDTH/32) + 1;
-    localparam integer OPT_MEM_ADDR_BITS = 1;
+    localparam integer OPT_MEM_ADDR_BITS = {internal_address_width};
     //----------------------------------------------
     //-- Signals for user logic register space example
     //------------------------------------------------
@@ -377,13 +379,17 @@ def template(args):
 
 
 def create_wrapper(component_spec: ComponentSpec, verilog_sources):
+    log_count = math.ceil(math.log2(max(4, component_spec.register_count())))
+    axi_address_width = log_count + 2
+    internal_address_width = log_count - 1
+
     internal_wire_declarations = [f"wire [31:0] {p};" for p in component_spec.output_ports()]
 
     slave_register_declarations = [f"reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg{i};"
                                   for i
                                   in range(component_spec.register_count())]
 
-    slave_axi_resets = [f"slv_reg0 <= {i};"
+    slave_axi_resets = [f"slv_reg{i} <= 0;"
                         for i
                         in range(component_spec.register_count())]
 
@@ -404,17 +410,17 @@ def create_wrapper(component_spec: ComponentSpec, verilog_sources):
     reg_out_cases = ["0 : reg_data_out <= sygnaller_scope;"]
     for i in range(1, component_spec.register_count()):
         if component_spec.is_output(i - 1):
-            reg_out_cases.append(f"reg_data_out <= module_output{i-1};")
+            reg_out_cases.append(f"{i} : reg_data_out <= module_output{i};")
         else:
-            reg_out_cases.append(f"{i} : reg_data_out <= slv_reg{i-1};")
+            reg_out_cases.append(f"{i} : reg_data_out <= slv_reg{i};")
 
     user_logic_args = []
     for i, p in enumerate(component_spec.port_list):
         if p == 'clock':
             user_logic_args.append('S_AXI_ACLK')
-        elif p == 'in':
+        elif p == 'input':
             user_logic_args.append(f'slv_reg{i+1}')
-        elif p == 'out':
+        elif p == 'output':
             user_logic_args.append(f'module_output{i+1}')
         elif p == 'scope':
             user_logic_args.append(f'sygnaller_scope')
@@ -427,7 +433,8 @@ def create_wrapper(component_spec: ComponentSpec, verilog_sources):
     args = {
         "component_name": component_spec.name,
         "verilog_source": '\n'.join(verilog_sources),
-        "axi_address_width": 4,
+        "axi_address_width": axi_address_width,
+        "internal_address_width": internal_address_width,
         "internal_wire_declarations": '\n'.join(internal_wire_declarations),
         "slave_register_declaration": '\n'.join(slave_register_declarations),
         "slave_axi_resets": '\n'.join(slave_axi_resets),

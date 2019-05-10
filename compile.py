@@ -34,16 +34,18 @@ def prepare_vivado_folder(project_id):
 
 def compile(project_id, verilog_sources, components, log, cancel_event):
     try:
-        log.put("Build started at " + datetime.now(pytz.timezone('Europe/London')).strftime('%H:%M:%S'))
+        log.put("Build started at " + datetime.now(pytz.timezone('Europe/London')).strftime('%H:%M:%S') + "\n")
 
-        log.put("Preparing Vivado project folder")
+        log.put("Preparing Vivado project folder\n")
         prepare_vivado_folder(project_id)
 
-        log.put("Determining which Verilog modules to compile")
+        log.put("Determining which Verilog modules to compile\n")
         tcl_script = tcl.TclScript(f"/home/ls2715/vivado_projects/p_{project_id}/Pynq-Z1/base/base")
 
         for c in cache.cached_components(project_id):
             tcl_script.delete_IP(c)
+
+        cache.clear_axi_wrappers(project_id)
 
         for component in components:
             axi_wrapper = verilog.create_wrapper(component, verilog_sources)
@@ -54,34 +56,34 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
 
         tcl_script.compile()
 
-        log.put("Generating the automated build script for Vivado")
+        log.put("Generating the automated build script for Vivado\n")
         cache.write_tcl_script(project_id, str(tcl_script))
 
         if len(components) > 0:
-            log.put("Uploading the source code to Vivado servers")
+            log.put("Uploading the source code to Vivado servers\n")
             sftp.put_file(cache.get_wrappers_dir(project_id), f"/home/ls2715/vivado_projects/p_{project_id}")
         else:
-            log.put("Skipping source code upload (no components to compile)")
+            log.put("Skipping source code upload (no components to compile)\n")
 
-        log.put("Uploading the build script to Vivado servers")
+        log.put("Uploading the build script to Vivado servers\n")
         sftp.put_file(cache.get_script_path(project_id), f"/home/ls2715/vivado_projects/p_{project_id}/script.tcl")
 
         if cancel_event.is_set():
             raise RuntimeError("Cancelled by user")
 
-        log.put("Updating the local cache with the latest changes")
+        log.put("Updating the local cache with the latest changes\n")
         cache.write_cache(project_id, [c.name for c in components])
 
         # run
-        log.put("Starting Vivado build!")
+        log.put("\nStarting Vivado build!\n")
         _, _, done = ssh.start_exec_thread(
-            f"vivado -mode batch -source /home/ls2715/vivado_projects/p_{project_id}/script.tcl",
+            f"vivado -mode batch -nojournal -nolog -notrace -source /home/ls2715/vivado_projects/p_{project_id}/script.tcl",
             out_queue=log,
             kill_event=cancel_event
         )
 
         done.wait()
-        log.put(f"Build completed with return code {done.returncode}")
+        log.put(f"Build completed with return code {done.returncode}\n")
 
         if done.returncode == 2:
             raise CompileError("Synthesis failed")
@@ -94,17 +96,17 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
             raise RuntimeError("Cancelled by user")
 
         # copy bit and tcl back to local server
-        log.put("Downloading the generated files from Vivado servers")
+        log.put("Downloading the generated files from Vivado servers\n")
         sftp.get_file(f"/home/ls2715/vivado_projects/p_{project_id}/overlay.tcl", cache.get_overlay_tcl_path(project_id))
         sftp.get_file(f"/home/ls2715/vivado_projects/p_{project_id}/overlay.bit", cache.get_overlay_bit_path(project_id))
 
-        log.put("All done.")
+        log.put("All done.\n")
     except CompileError as e:
-        log.put(str(e.args[0]))
+        log.put(str(e.args[0]) + "\n")
     except RuntimeError as e:
-        log.put("Build failed: " + str(e.args[0]))
+        log.put("Build failed: " + str(e.args[0]) + "\n")
     except Exception as e:
-        log.put("Build failed with a " + type(e).__name__)
+        log.put("Build failed with a " + type(e).__name__ + "\n")
 
     running_threads.pop(project_id, None)
 
@@ -130,4 +132,4 @@ def cancel_compilation(project_id):
     if project_id in running_threads:
         running_threads[project_id].cancel.set()
     else:
-        raise CompileError("There is not build currently running for this project")
+        raise CompileError("There is no build currently running for this project")

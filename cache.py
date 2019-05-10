@@ -27,6 +27,17 @@ def clear_cache(project_id):
         pass
 
 
+def clear_axi_wrappers(project_id):
+    os.makedirs(cache_dir + project_id + '/wrappers', exist_ok=True)
+    for the_file in os.listdir(cache_dir + project_id + '/wrappers'):
+        try:
+            file_path = os.path.join(cache_dir + project_id + '/wrappers', the_file)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+        except Exception as e:
+            print(e)
+
+
 def write_axi_wrapper(project_id, name, source_code):
     os.makedirs(cache_dir + project_id + '/wrappers', exist_ok=True)
     with open(cache_dir + project_id + "/wrappers/" + name, 'w') as f:

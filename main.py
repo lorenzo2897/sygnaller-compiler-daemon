@@ -43,7 +43,7 @@ class DaemonServer(http.server.BaseHTTPRequestHandler):
             return {
                 "running": project_id in compile.running_threads,
                 "last_completed": cache.get_overlay_modified_date(project_id),
-                "logs": '\n'.join(logs)
+                "logs": ''.join(logs)
             }
 
         elif command == 'cancel_build':

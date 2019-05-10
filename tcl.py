@@ -20,16 +20,18 @@ class TclScript:
         if register_count > 512:
             raise RuntimeError("IP cannot have more than 512 registers")
 
+        self._tcl('puts "Updating custom component %s"' % name)
         self._tcl('set component_name "%s"' % name)
         self._tcl('set axi_register_count %d' % register_count)
         self._tcl("""set component_core_id [create_peripheral xilinx.com user ${component_name} 1.0 -dir ../../../ip]
 add_peripheral_interface S00_AXI -interface_mode slave -axi_type lite ${component_core_id}
 set_property VALUE ${axi_register_count} [ipx::get_bus_parameters WIZ_NUM_REG -of_objects [ipx::get_bus_interfaces S00_AXI -of_objects ${component_core_id}]]
-generate_peripheral -driver -bfm_example_design -debug_hw_example_design ${component_core_id}
+generate_peripheral -driver -bfm_example_design -debug_hw_example_design -force ${component_core_id}
 write_peripheral ${component_core_id}
 update_ip_catalog -rebuild""")
 
     def edit_IP(self, name, new_source_path):
+        self._tcl('puts "Editing custom component %s"' % name)
         self._tcl('set component_name "%s"' % name)
         self._tcl('ipx::edit_ip_in_project -upgrade true -name ${component_name}_project -directory ./base.tmp/${component_name}_project ../../../ip/${component_name}_1.0/component.xml')
         self._tcl('file copy -force "%s" [get_files "*[get_property top [current_fileset]]*AXI.v"]' % new_source_path)
@@ -45,6 +47,7 @@ ipx::move_temp_component_back -component [ipx::current_core]
 close_project -delete""")
 
     def add_IP(self, name):
+        self._tcl('puts "Adding custom component %s to the main project"' % name)
         self._tcl('set component_name "%s"' % name)
         self._tcl("""update_ip_catalog -rebuild
 open_bd_design {./base.srcs/sources_1/bd/base/base.bd}
@@ -59,23 +62,33 @@ update_ip_catalog -quiet -delete_ip xilinx.com:user:${component_name}:1.0 -repo_
 file delete -force [glob -nocomplain ../../../ip/${component_name}*]""")
 
     def compile(self):
-        self._tcl("""report_ip_status
+        self._tcl('puts "Updating IP catalogue"')
+        self._tcl("""report_ip_status -quiet
 catch {upgrade_ip [get_ips *]}
+
+set_msg_config -id "Synth 8-350" -suppress
+set_msg_config -id "Synth 8-3331" -suppress
+set_msg_config -id "XPM_CDC_GRAY: TCL-1000" -suppress
+set_msg_config -id "Project 1-454" -suppress
+set_msg_config -id "Timing 38-316" -suppress
 
 reset_run synth_1
 reset_run impl_1
 
+puts "Launching synthesis step"
 launch_runs synth_1
 wait_on_run synth_1
 
 set synth_status [ get_property STATUS [get_runs synth_1] ]
 if { ${synth_status} eq "synth_design Complete!" } {
     puts "Synthesis complete"
+    puts ""
 } else {
     puts "Synthesis failed"
     exit 2
 }
 
+puts "Launching implementation step"
 launch_runs impl_1 -to_step write_bitstream -jobs 16
 wait_on_run impl_1
 
@@ -83,11 +96,13 @@ wait_on_run impl_1
 set impl_status [ get_property STATUS [get_runs impl_1] ]
 if { ${impl_status} eq "write_bitstream Complete!" } {
     puts "Implementation complete"
+    puts ""
 } else {
     puts "Implementation failed"
     exit 3
 }
 
+puts "Copying files"
 file copy -force ./base.runs/impl_1/base_wrapper.bit ../../../overlay.bit
 write_bd_tcl -force ../../../overlay.tcl
 exit 0""")
