@@ -90,6 +90,7 @@ if { ${synth_status} eq "synth_design Complete!" } {
     puts "Synthesis failed"
     set fp [open "../../../build_report.txt" w]
     puts $fp "SYNTHESIS_FAIL"
+    puts $fp [exec bash -c {cat ./base.runs/*/runme.log | grep ERROR || true}]
     close $fp
     exit 2
 }
@@ -107,6 +108,7 @@ if { ${impl_status} eq "write_bitstream Complete!" } {
     puts "Implementation failed"
     set fp [open "../../../build_report.txt" w]
     puts $fp "IMPLEMENTATION_FAIL"
+    puts $fp [exec bash -c {cat ./base.runs/impl_1/runme.log | grep ERROR || true}]
     close $fp
     exit 3
 }
@@ -128,6 +130,18 @@ set wns [ get_property STATS.WNS [get_runs impl_1] ]
 puts $fp "WNS,$wns"
 set whs [ get_property STATS.WHS [get_runs impl_1] ]
 puts $fp "WHS,$whs"
+
+catch {
+    set lut_use [exec sed -E -n {s/\| Slice LUTs *\| *([0-9]*) *\| *[0-9]* *\| *([0-9]*) *\| *([0-9]*\.[0-9]*) *\|/LUT,\\1,\\2,\\3/p} "./base.runs/impl_1/base_wrapper_utilization_placed.rpt"]
+    set reg_use [exec sed -E -n {s/\| Slice Registers *\| *([0-9]*) *\| *[0-9]* *\| *([0-9]*) *\| *([0-9]*\.[0-9]*) *\|/REGISTERS,\\1,\\2,\\3/p} "./base.runs/impl_1/base_wrapper_utilization_placed.rpt"]
+    set bram_use [exec sed -E -n {s/\| Block RAM Tile *\| *([0-9]*) *\| *[0-9]* *\| *([0-9]*) *\| *([0-9]*\.[0-9]*) *\|/BRAM,\\1,\\2,\\3/p} "./base.runs/impl_1/base_wrapper_utilization_placed.rpt"]
+    set dsp_use [exec sed -E -n {s/\| DSPs *\| *([0-9]*) *\| *[0-9]* *\| *([0-9]*) *\| *([0-9]*\.[0-9]*) *\|/DSP,\\1,\\2,\\3/p} "./base.runs/impl_1/base_wrapper_utilization_placed.rpt"]
+    puts $fp "$lut_use"
+    puts $fp "$reg_use"
+    puts $fp "$bram_use"
+    puts $fp "$dsp_use"
+}
+
 close $fp
 
 exit 0""")
