@@ -36,6 +36,7 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
     try:
         log.put("Build started at " + datetime.now(pytz.timezone('Europe/London')).strftime('%H:%M:%S') + "\n")
 
+        log.progress = 2
         log.put("Preparing Vivado project folder\n")
         prepare_vivado_folder(project_id)
 
@@ -56,6 +57,7 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
 
         tcl_script.compile()
 
+        log.progress = 5
         log.put("Generating the automated build script for Vivado\n")
         cache.write_tcl_script(project_id, str(tcl_script))
 
@@ -65,12 +67,14 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
         else:
             log.put("Skipping source code upload (no components to compile)\n")
 
+        log.progress = 10
         log.put("Uploading the build script to Vivado servers\n")
         sftp.put_file(cache.get_script_path(project_id), f"/home/ls2715/vivado_projects/p_{project_id}/script.tcl")
 
         if cancel_event.is_set():
             raise RuntimeError("Cancelled by user")
 
+        log.progress = 15
         log.put("Updating the local cache with the latest changes\n")
         cache.write_cache(project_id, [c.name for c in components])
 
@@ -79,11 +83,15 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
         _, _, done = ssh.start_exec_thread(
             f"vivado -mode batch -nojournal -nolog -notrace -source /home/ls2715/vivado_projects/p_{project_id}/script.tcl",
             out_queue=log,
-            kill_event=cancel_event
+            kill_event=cancel_event,
+            intercept_progress=True
         )
 
         done.wait()
         log.put(f"Build completed with return code {done.returncode}\n")
+        log.progress = 95
+        log.put("Downloading the build report from Vivado servers\n")
+        sftp.get_file(f"/home/ls2715/vivado_projects/p_{project_id}/build_report.txt", cache.get_report_path(project_id))
 
         if done.returncode == 2:
             raise CompileError("Synthesis failed")
@@ -108,6 +116,7 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
     except Exception as e:
         log.put("Build failed with a " + type(e).__name__ + "\n")
 
+    log.progress = 100
     running_threads.pop(project_id, None)
 
 
@@ -120,6 +129,7 @@ def start_compilation(project_id, verilog_sources, components):
             raise CompileError("A build is already running for this project")
 
     log_queue = Queue()
+    log_queue.progress = 1
     cancel_event = Event()
     running_logs[project_id] = log_queue
     t = Thread(target=compile, args=(project_id, verilog_sources, components, log_queue, cancel_event), daemon=True)

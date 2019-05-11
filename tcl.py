@@ -8,7 +8,10 @@ class TclScript:
         self._tcl_string = ""
         self._tcl("cd " + project_dir)
         self._tcl("open_project ./base.xpr")
-        self._tcl("set_msg_config -id {IP_Flow 19-1099} -new_severity {Warning}")
+        self._tcl("""
+    set fp [open "../../../build_report.txt" w]
+    puts $fp "ERROR"
+    close $fp""")
 
     def create_IP(self, name, register_count):
         if not str(name).replace('_', '').isalnum():
@@ -85,6 +88,9 @@ if { ${synth_status} eq "synth_design Complete!" } {
     puts ""
 } else {
     puts "Synthesis failed"
+    set fp [open "../../../build_report.txt" w]
+    puts $fp "SYNTHESIS_FAIL"
+    close $fp
     exit 2
 }
 
@@ -99,12 +105,31 @@ if { ${impl_status} eq "write_bitstream Complete!" } {
     puts ""
 } else {
     puts "Implementation failed"
+    set fp [open "../../../build_report.txt" w]
+    puts $fp "IMPLEMENTATION_FAIL"
+    close $fp
     exit 3
 }
 
-puts "Copying files"
+puts "Copying overlay files"
 file copy -force ./base.runs/impl_1/base_wrapper.bit ../../../overlay.bit
 write_bd_tcl -force ../../../overlay.tcl
+
+puts "Generating final reports"
+set fp [open "../../../build_report.txt" w]
+puts $fp "SUCCESS"
+set elapsed [ get_property STATS.ELAPSED [get_runs impl_1] ]
+puts $fp "ELAPSED,$elapsed"
+set tns [ get_property STATS.TNS [get_runs impl_1] ]
+puts $fp "TNS,$tns"
+set ths [ get_property STATS.THS [get_runs impl_1] ]
+puts $fp "THS,$ths"
+set wns [ get_property STATS.WNS [get_runs impl_1] ]
+puts $fp "WNS,$wns"
+set whs [ get_property STATS.WHS [get_runs impl_1] ]
+puts $fp "WHS,$whs"
+close $fp
+
 exit 0""")
 
     def __str__(self):

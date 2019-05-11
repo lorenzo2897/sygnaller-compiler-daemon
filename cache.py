@@ -68,6 +68,11 @@ def get_overlay_tcl_path(project_id):
     return cache_dir + project_id + '/out/overlay.bit'
 
 
+def get_report_path(project_id):
+    os.makedirs(cache_dir + project_id + '/out', exist_ok=True)
+    return cache_dir + project_id + '/out/build_report.txt'
+
+
 def get_overlay_modified_date(project_id):
     bitfile = get_overlay_bit_path(project_id)
     tclfile = get_overlay_tcl_path(project_id)

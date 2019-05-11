@@ -4,6 +4,7 @@ import http.server
 import urllib.parse
 import json
 import traceback
+import os
 
 import compile
 import cache
@@ -36,13 +37,35 @@ class DaemonServer(http.server.BaseHTTPRequestHandler):
             project_id = data['project_id']
             logs = []
 
-            if project_id in compile.running_logs:
+            last_completed = cache.get_overlay_modified_date(project_id)
+
+            if project_id in compile.running_logs:  # running
+                last_build_status = ''
+                build_report = ''
+                progress = compile.running_logs[project_id].progress
                 while not compile.running_logs[project_id].empty():
                     logs.append(compile.running_logs[project_id].get_nowait())
+            else:  # not running
+                try:
+                    with open(cache.get_report_path(project_id)) as f:
+                        last_build_status = f.readline()
+                        build_report = f.read()
+                except:
+                    traceback.print_exc()
+                    last_build_status = ''
+                    build_report = ''
+
+                if last_completed != 0:
+                    progress = 100
+                else:
+                    progress = 0
 
             return {
                 "running": project_id in compile.running_threads,
-                "last_completed": cache.get_overlay_modified_date(project_id),
+                "progress": progress,
+                "last_completed": last_completed,
+                "last_build_status": last_build_status,
+                "build_report": build_report,
                 "logs": ''.join(logs)
             }
 
