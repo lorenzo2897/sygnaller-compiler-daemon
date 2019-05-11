@@ -37,6 +37,8 @@ class DaemonServer(http.server.BaseHTTPRequestHandler):
             project_id = data['project_id']
             logs = []
 
+            is_running = project_id in compile.running_threads
+
             last_completed = cache.get_overlay_modified_date(project_id)
 
             # logs
@@ -51,31 +53,28 @@ class DaemonServer(http.server.BaseHTTPRequestHandler):
                     progress = 0
 
             # report
-            if project_id in compile.running_threads:  # running
+            if is_running:
                 last_build_status = ''
                 build_report = ''
-            else:  # not running
-                try:
-                    with open(cache.get_report_path(project_id)) as f:
-                        last_build_status = f.readline()
-                        build_report = f.read()
-                except:
-                    traceback.print_exc()
-                    last_build_status = ''
-                    build_report = ''
+                source_mappings = []
+            else:
+                last_build_status, build_report = cache.get_build_report(project_id)
+                source_mappings = cache.get_source_mapping(project_id)
 
             return {
-                "running": project_id in compile.running_threads,
+                "running": is_running,
                 "progress": progress,
                 "last_completed": last_completed,
                 "last_build_status": last_build_status,
                 "build_report": build_report,
+                "source_mappings": source_mappings,
                 "logs": ''.join(logs)
             }
 
         elif command == 'cancel_build':
             project_id = data['project_id']
             compile.cancel_compilation(project_id)
+            return {}
 
         elif command == 'download_overlay_bit':
             project_id = data['project_id']

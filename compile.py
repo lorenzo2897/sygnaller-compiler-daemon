@@ -43,13 +43,25 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
         log.put("Determining which Verilog modules to compile\n")
         tcl_script = tcl.TclScript(f"/home/ls2715/vivado_projects/p_{project_id}/Pynq-Z1/base/base")
 
+        mappings = []
+        line_number = 4
+        for filename, source in verilog_sources.items():
+            lines = len(source.splitlines())
+            mappings.append({
+                "file": filename,
+                "start": line_number,
+                "end": line_number + lines
+            })
+            line_number += lines + 1
+        cache.put_source_mapping(project_id, mappings)
+
         for c in cache.cached_components(project_id):
             tcl_script.delete_IP(c)
 
         cache.clear_axi_wrappers(project_id)
 
         for component in components:
-            axi_wrapper = verilog.create_wrapper(component, verilog_sources)
+            axi_wrapper = verilog.create_wrapper(component, verilog_sources.values())
             cache.write_axi_wrapper(project_id, component.name, axi_wrapper)
             tcl_script.create_IP(component.name, component.register_count())
             tcl_script.edit_IP(component.name, f"/home/ls2715/vivado_projects/p_{project_id}/wrappers/{component.name}")

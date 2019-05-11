@@ -73,6 +73,33 @@ def get_report_path(project_id):
     return cache_dir + project_id + '/out/build_report.txt'
 
 
+def get_build_report(project_id):
+    try:
+        with open(get_report_path(project_id)) as f:
+            last_build_status = f.readline()
+            build_report = f.read()
+    except:
+        last_build_status = ''
+        build_report = ''
+    return last_build_status, build_report
+
+
+def put_source_mapping(project_id, mapping):
+    try:
+        with open(cache_dir + project_id + '/source_mapping.json', 'w') as f:
+            json.dump(mapping, f)
+    except:
+        pass
+
+
+def get_source_mapping(project_id):
+    try:
+        with open(cache_dir + project_id + '/source_mapping.json') as f:
+            return json.load(f)
+    except:
+        return []
+
+
 def get_overlay_modified_date(project_id):
     bitfile = get_overlay_bit_path(project_id)
     tclfile = get_overlay_tcl_path(project_id)
