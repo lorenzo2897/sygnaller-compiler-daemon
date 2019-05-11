@@ -84,6 +84,8 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
         sftp.put_file(cache.get_script_path(project_id), f"/home/ls2715/vivado_projects/p_{project_id}/script.tcl")
 
         if cancel_event.is_set():
+            with open(cache.get_report_path(project_id), 'w') as f:
+                f.write("ERROR\nBuild cancelled by user")
             raise RuntimeError("Cancelled by user")
 
         log.progress = 15
@@ -113,6 +115,8 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
             raise CompileError("Build failed due to unknown error")
 
         if cancel_event.is_set():
+            with open(cache.get_report_path(project_id), 'w') as f:
+                f.write("ERROR\nBuild cancelled by user")
             raise RuntimeError("Cancelled by user")
 
         # copy bit and tcl back to local server

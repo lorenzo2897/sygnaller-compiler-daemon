@@ -47,6 +47,17 @@ ipx::create_xgui_files [ipx::current_core]
 ipx::update_checksums [ipx::current_core]
 ipx::save_core [ipx::current_core]
 ipx::move_temp_component_back -component [ipx::current_core]
+
+set syntax_errors [ check_syntax -return_string ]
+if {$syntax_errors != ""} {
+    set fp [open "../../../build_report.txt" w]
+    puts $fp "SYNTAX_ERROR"
+    puts $fp $syntax_errors
+    close $fp
+    close_project -delete
+    exit 4
+}
+
 close_project -delete""")
 
     def add_IP(self, name):
