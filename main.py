@@ -39,12 +39,21 @@ class DaemonServer(http.server.BaseHTTPRequestHandler):
 
             last_completed = cache.get_overlay_modified_date(project_id)
 
-            if project_id in compile.running_logs:  # running
-                last_build_status = ''
-                build_report = ''
-                progress = compile.running_logs[project_id].progress
+            # logs
+            if project_id in compile.running_logs:
                 while not compile.running_logs[project_id].empty():
                     logs.append(compile.running_logs[project_id].get_nowait())
+                progress = compile.running_logs[project_id].progress
+            else:
+                if last_completed != 0:
+                    progress = 100
+                else:
+                    progress = 0
+
+            # report
+            if project_id in compile.running_threads:  # running
+                last_build_status = ''
+                build_report = ''
             else:  # not running
                 try:
                     with open(cache.get_report_path(project_id)) as f:
@@ -54,11 +63,6 @@ class DaemonServer(http.server.BaseHTTPRequestHandler):
                     traceback.print_exc()
                     last_build_status = ''
                     build_report = ''
-
-                if last_completed != 0:
-                    progress = 100
-                else:
-                    progress = 0
 
             return {
                 "running": project_id in compile.running_threads,
