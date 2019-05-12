@@ -84,6 +84,10 @@ class DaemonServer(http.server.BaseHTTPRequestHandler):
             project_id = data['project_id']
             return {"file": cache.get_overlay_tcl_path(project_id)}
 
+        elif command == 'download_python_api':
+            project_id = data['project_id']
+            return {"file": cache.get_python_api_path(project_id)}
+
         else:
             return self._error('Command not supported')
 

@@ -68,6 +68,11 @@ def get_overlay_tcl_path(project_id):
     return cache_dir + project_id + '/out/overlay.bit'
 
 
+def get_python_api_path(project_id):
+    os.makedirs(cache_dir + project_id + '/out', exist_ok=True)
+    return cache_dir + project_id + '/out/sygnaller.py'
+
+
 def get_report_path(project_id):
     os.makedirs(cache_dir + project_id + '/out', exist_ok=True)
     return cache_dir + project_id + '/out/build_report.txt'

@@ -416,13 +416,13 @@ def create_wrapper(component_spec: ComponentSpec, verilog_sources):
 
     user_logic_args = []
     for i, p in enumerate(component_spec.port_list):
-        if p == 'clock':
+        if p.port_type == 'clock':
             user_logic_args.append('S_AXI_ACLK')
-        elif p == 'input':
+        elif p.port_type == 'input':
             user_logic_args.append(f'slv_reg{i+1}')
-        elif p == 'output':
+        elif p.port_type == 'output':
             user_logic_args.append(f'module_output{i+1}')
-        elif p == 'scope':
+        elif p.port_type == 'scope':
             user_logic_args.append(f'sygnaller_scope')
 
     user_logic = component_spec.name + ' module_instance(' + ', '.join(user_logic_args) + ');'

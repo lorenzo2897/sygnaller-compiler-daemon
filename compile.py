@@ -8,6 +8,7 @@ import ssh
 import verilog
 import sftp
 import tcl
+import python_api
 
 
 class CompileError(Exception):
@@ -123,6 +124,9 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
         log.put("Downloading the generated files from Vivado servers\n")
         sftp.get_file(f"/home/ls2715/vivado_projects/p_{project_id}/overlay.tcl", cache.get_overlay_tcl_path(project_id))
         sftp.get_file(f"/home/ls2715/vivado_projects/p_{project_id}/overlay.bit", cache.get_overlay_bit_path(project_id))
+
+        log.put("Generating Python API\n")
+        python_api.write_python_api_to_file(components, cache.get_python_api_path(project_id))
 
         log.put("All done.\n")
     except CompileError as e:
