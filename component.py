@@ -19,6 +19,9 @@ class ComponentSpec:
     def has_scope_port(self):
         return 'scope' in [p.port_type for p in self.port_list]
 
+    def has_video_out_port(self):
+        return 'video out' in [p.port_type for p in self.port_list]
+
     def is_output(self, port_index):
         return len(self.port_list) > port_index and self.port_list[port_index].port_type == 'output'
 

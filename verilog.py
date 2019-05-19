@@ -23,7 +23,10 @@ def template(args):
     )
     (
         // Users to add ports here
-
+        input wire [31:0] video_in,
+        input wire [31:0] video_x,
+        input wire [31:0] video_y,
+        output wire [31:0] video_out,
         // User ports ends
         // Do not modify the ports beyond this line
 
@@ -422,6 +425,14 @@ def create_wrapper(component_spec: ComponentSpec, verilog_sources):
             user_logic_args.append(f'slv_reg{i+1}')
         elif p.port_type == 'output':
             user_logic_args.append(f'module_output{i+1}')
+        elif p.port_type == 'video in':
+            user_logic_args.append(f'video_in')
+        elif p.port_type == 'video x':
+            user_logic_args.append(f'video_x')
+        elif p.port_type == 'video y':
+            user_logic_args.append(f'video_y')
+        elif p.port_type == 'video out':
+            user_logic_args.append(f'video_out')
         elif p.port_type == 'scope':
             user_logic_args.append(f'sygnaller_scope')
 

@@ -38,7 +38,9 @@ update_ip_catalog -rebuild""")
         self._tcl('set component_name "%s"' % name)
         self._tcl('ipx::edit_ip_in_project -upgrade true -name ${component_name}_project -directory ./base.tmp/${component_name}_project ../../../ip/${component_name}_1.0/component.xml')
         self._tcl('file copy -force "%s" [get_files "*[get_property top [current_fileset]]*AXI.v"]' % new_source_path)
+        self._tcl('file copy -force "%s.outer" [get_files "*[get_property top [current_fileset]].v"]' % new_source_path)
         self._tcl("""ipx::merge_project_changes files [ipx::current_core]
+ipx::merge_project_changes ports [ipx::current_core]
 ipx::update_checksums [ipx::current_core]
 ipx::save_core [ipx::current_core]
 set_property core_revision [expr [get_property core_revision [ipx::current_core]] + 1] [ipx::current_core]
@@ -60,13 +62,18 @@ if {$syntax_errors != ""} {
 
 close_project -delete""")
 
-    def add_IP(self, name):
+    def add_IP(self, name, bind_video_out):
         self._tcl('puts "Adding custom component %s to the main project"' % name)
         self._tcl('set component_name "%s"' % name)
         self._tcl("""update_ip_catalog -rebuild
 open_bd_design {./base.srcs/sources_1/bd/base/base.bd}
 create_bd_cell -type ip -vlnv xilinx.com:user:${component_name}:1.0 ${component_name}_0
 apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { Clk_master {/ps7_0/FCLK_CLK0 (100 MHz)} Clk_slave {Auto} Clk_xbar {/ps7_0/FCLK_CLK0 (100 MHz)} Master {/ps7_0/M_AXI_GP0} Slave {/${component_name}_0/S00_AXI} intc_ip {/ps7_0_axi_periph} master_apm {0}}  [get_bd_intf_pins ${component_name}_0/S00_AXI]""")
+        self._tcl('connect_bd_net [get_bd_pins ${component_name}_0/video_in] [get_bd_pins sygnaller_dma_0/vin]')
+        self._tcl('connect_bd_net [get_bd_pins ${component_name}_0/video_x] [get_bd_pins sygnaller_dma_0/x]')
+        self._tcl('connect_bd_net [get_bd_pins ${component_name}_0/video_y] [get_bd_pins sygnaller_dma_0/y]')
+        if bind_video_out:
+            self._tcl('connect_bd_net [get_bd_pins ${component_name}_0/video_out] [get_bd_pins sygnaller_dma_0/vout]')
 
     def delete_IP(self, name):
         self._tcl('set component_name "%s"' % name)
@@ -90,7 +97,7 @@ reset_run synth_1
 reset_run impl_1
 
 puts "Launching synthesis step"
-launch_runs synth_1
+launch_runs synth_1 -jobs 24
 wait_on_run synth_1
 
 set synth_status [ get_property STATUS [get_runs synth_1] ]

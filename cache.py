@@ -44,6 +44,10 @@ def write_axi_wrapper(project_id, name, source_code):
         f.write(source_code)
 
 
+def write_outer_axi_wrapper(project_id, name, source_code):
+    write_axi_wrapper(project_id, name + '.outer', source_code)
+
+
 def write_tcl_script(project_id, source_code):
     os.makedirs(cache_dir + project_id, exist_ok=True)
     with open(cache_dir + project_id + "/script.tcl", 'w') as f:

@@ -9,6 +9,7 @@ import verilog
 import sftp
 import tcl
 import python_api
+import verilog_outer
 
 
 class CompileError(Exception):
@@ -63,10 +64,12 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
 
         for component in components:
             axi_wrapper = verilog.create_wrapper(component, verilog_sources.values())
+            outer_axi_wrapper = verilog_outer.create_wrapper(component)
             cache.write_axi_wrapper(project_id, component.name, axi_wrapper)
+            cache.write_outer_axi_wrapper(project_id, component.name, outer_axi_wrapper)
             tcl_script.create_IP(component.name, component.register_count())
             tcl_script.edit_IP(component.name, f"/home/ls2715/vivado_projects/p_{project_id}/wrappers/{component.name}")
-            tcl_script.add_IP(component.name)
+            tcl_script.add_IP(component.name, component.has_video_out_port())
 
         tcl_script.compile()
 
@@ -112,6 +115,8 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
             raise CompileError("Synthesis failed")
         elif done.returncode == 3:
             raise CompileError("Hardware implementation failed")
+        elif done.returncode == 4:
+            raise CompileError("Syntax error")
         elif done.returncode > 0:
             raise CompileError("Build failed due to unknown error")
 
@@ -135,6 +140,8 @@ def compile(project_id, verilog_sources, components, log, cancel_event):
         log.put("Build failed: " + str(e.args[0]) + "\n")
     except Exception as e:
         log.put("Build failed with a " + type(e).__name__ + "\n")
+        with open('/tmp/log', 'a') as f:
+            f.write(str(e))
 
     log.progress = 100
     running_threads.pop(project_id, None)
