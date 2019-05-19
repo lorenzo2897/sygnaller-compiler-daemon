@@ -8,7 +8,6 @@ import sys
 print("Loading hardware components...", file=sys.stderr)
 
 from pynq.overlays.base import BaseOverlay
-import base64
 
 
 class Component:
@@ -32,34 +31,17 @@ class Component:
             raise AttributeError
 
 
-class hw:
-    __overlay = BaseOverlay('../overlay.bit')
-    PMODA = __overlay.PMODA
-    PMODB = __overlay.PMODB
-    ARDUINO = __overlay.ARDUINO
-    audio = __overlay.audio
-    buttons = __overlay.buttons
-    leds = __overlay.leds
-    rgbleds = __overlay.rgbleds
-    switches = __overlay.switches
-    video = __overlay.video
+_overlay = BaseOverlay('../overlay.bit')
+PMODA = _overlay.PMODA
+PMODB = _overlay.PMODB
+ARDUINO = _overlay.ARDUINO
+audio = _overlay.audio
+buttons = _overlay.buttons
+leds = _overlay.leds
+rgbleds = _overlay.rgbleds
+switches = _overlay.switches
+video = _overlay.video
 {component_list}
-
-
-class terminal:
-    def imageFromDataURI(uri):
-        print("~"+uri)
-        
-    def imageFromFile(filename):
-        with open(filename, "rb") as f:
-            print("~data:image;base64,"+ base64.b64encode(f.read()).decode('utf-8'))
-
-    def showFigure(plt):
-        import io
-        buf = io.BytesIO()
-        plt.gcf().savefig(buf, format='png')
-        buf.seek(0)
-        print("~data:image;base64,"+ base64.b64encode(buf.read()).decode('utf-8'))
 
     """.format(**args)
 
@@ -75,7 +57,7 @@ def make_python_api(components):
                 inputs[p.name] = (i+1) * 4
             elif p.port_type == 'output':
                 outputs[p.name] = (i+1) * 4
-        component_list.append(f"    {c.name} = Component(__overlay.{c.name}_0, {json.dumps(inputs)}, {json.dumps(outputs)})")
+        component_list.append(f"{c.name} = Component(_overlay.{c.name}_0, {json.dumps(inputs)}, {json.dumps(outputs)})")
 
     return template({"component_list": '\n'.join(component_list)})
 
