@@ -5,6 +5,8 @@ def template(args):
     return"""
 import sys
 from contextlib import contextmanager
+import PIL.Image
+from threading import Thread, Event
 
 print("Loading hardware components...", file=sys.stderr)
 
@@ -45,8 +47,47 @@ video = _overlay.video
 {component_list}
 
 
+# ******************************************
+
+save_image_signal = Event()
+end_loop = False
+img_in = None
+img_out = None
+alternate_video_output = False
+
+def save_image_loop():
+    global alternate_video_output
+
+    while not end_loop:
+        save_image_signal.wait()
+        if end_loop:
+            return
+        if img_in is not None and img_out is not None:
+            combined_img = PIL.Image.new('RGB', (img_in.size[0] + img_out.size[0], img_in.size[1]))
+            combined_img.paste(img_in, (0,0))
+            combined_img.paste(img_out, (img_in.size[0],0))
+
+            alternate_video_output = not alternate_video_output
+            if alternate_video_output:
+                combined_img.save("/home/xilinx/projects/videoA.jpg", "JPEG")
+                with open("/home/xilinx/projects/videoSELECT.txt", 'w') as f:
+                    f.write("A")
+            else:
+                combined_img.save("/home/xilinx/projects/videoB.jpg", "JPEG")
+                with open("/home/xilinx/projects/videoSELECT.txt", 'w') as f:
+                    f.write("B")
+        if end_loop:
+            return
+        save_image_signal.clear()
+
+
+# ******************************************
+
+
 @contextmanager
 def video_start():
+    global end_loop
+    
     from pynq.lib.video import PIXEL_RGBA
     
     hdmi_in = video.hdmi_in
@@ -55,28 +96,49 @@ def video_start():
     hdmi_in.configure(PIXEL_RGBA)
     hdmi_out.configure(hdmi_in.mode, PIXEL_RGBA)
     
+    end_loop = False
+    save_image_signal.clear()
+    Thread(target=save_image_loop, daemon=True).start()
+    
     with hdmi_in.start(), hdmi_out.start():
         yield
+        end_loop = True
+        save_image_signal.set()
 
 
 ip = _overlay.sygnaller_dma_0
+fno = 0
 
 
 def process_frame(in_frame=None, out_frame=None, latency=0):
+    global fno, img_in, img_out
+    
     if in_frame is None:
         in_frame = video.hdmi_in.readframe()
         
     if out_frame is None:
         out_frame = video.hdmi_out.newframe()
-        
+    
     ip.write(0x10, in_frame.physical_address)
     ip.write(0x18, out_frame.physical_address)
     ip.write(0x20, 1280)
     ip.write(0x28, 720)
     ip.write(0x30, latency)
     ip.write(0x00, 0x01)  # ap_start
+
+    fno += 1
+    if fno >= 60:
+        img_in = PIL.Image.fromarray(in_frame).convert('RGB')
+        pass
+
     while (ip.read(0) & 0x4) == 0:  # ap_ready
         pass
+    
+    if fno >= 60:
+        img_out = PIL.Image.fromarray(out_frame).convert('RGB')
+        save_image_signal.set()
+        fno = 0
+
     video.hdmi_out.writeframe(out_frame)
 
 
