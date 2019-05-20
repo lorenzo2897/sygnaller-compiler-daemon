@@ -92,9 +92,15 @@ set_msg_config -id "Synth 8-3331" -suppress
 set_msg_config -id "XPM_CDC_GRAY: TCL-1000" -suppress
 set_msg_config -id "Project 1-454" -suppress
 set_msg_config -id "Timing 38-316" -suppress
+set_msg_config -id "PSU-1" -suppress
+set_msg_config -id "PSU-2" -suppress
+set_msg_config -id "IP_Flow 19-3452" -suppress
 
 reset_run synth_1
 reset_run impl_1
+
+set_property strategy Flow_RuntimeOptimized [get_runs synth_1]
+set_property strategy Flow_RuntimeOptimized [get_runs impl_1]
 
 puts "Launching synthesis step"
 launch_runs synth_1 -jobs 24
@@ -114,6 +120,9 @@ if { ${synth_status} eq "synth_design Complete!" } {
 }
 
 puts "Launching implementation step"
+if [file exists "../../../reference_routed.dcp"] {
+    set_property incremental_checkpoint "../../../reference_routed.dcp" [get_runs impl_1]
+}
 launch_runs impl_1 -to_step write_bitstream -jobs 16
 wait_on_run impl_1
 
