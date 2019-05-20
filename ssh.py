@@ -62,10 +62,10 @@ def intercept_log(line, log_queue):
     elif line.startswith('Starting Logic Optimization Task'):
         log_queue.progress = 50
 
-    elif line.startswith('Starting Placer Task'):
+    elif line.startswith('Starting Placer Task') or line.startswith('Starting Incremental Placer Task'):
         log_queue.progress = 60
 
-    elif line.startswith('Starting Routing Task'):
+    elif line.startswith('Starting Routing Task') or line.startswith('Starting Incremental Route Task'):
         log_queue.progress = 70
 
     elif line.startswith('Routing Is Done.'):
