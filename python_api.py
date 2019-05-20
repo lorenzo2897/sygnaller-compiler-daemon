@@ -4,6 +4,7 @@ import json
 def template(args):
     return"""
 import sys
+from contextlib import contextmanager
 
 print("Loading hardware components...", file=sys.stderr)
 
@@ -42,6 +43,45 @@ rgbleds = _overlay.rgbleds
 switches = _overlay.switches
 video = _overlay.video
 {component_list}
+
+
+@contextmanager
+def video_start():
+    from pynq.lib.video import PIXEL_RGBA
+    
+    hdmi_in = video.hdmi_in
+    hdmi_out = video.hdmi_out
+    
+    hdmi_in.configure(PIXEL_RGBA)
+    hdmi_out.configure(hdmi_in.mode, PIXEL_RGBA)
+    
+    with hdmi_in.start(), hdmi_out.start():
+        yield
+
+
+ip = _overlay.sygnaller_dma_0
+
+
+def process_frame(in_frame=None, out_frame=None, latency=0):
+    if in_frame is None:
+        in_frame = video.hdmi_in.readframe()
+        
+    if out_frame is None:
+        out_frame = video.hdmi_out.newframe()
+        
+    ip.write(0x10, in_frame.physical_address)
+    ip.write(0x18, out_frame.physical_address)
+    ip.write(0x20, 1280)
+    ip.write(0x28, 720)
+    ip.write(0x30, latency)
+    ip.write(0x00, 0x01)  # ap_start
+    while (ip.read(0) & 0x4) == 0:  # ap_ready
+        pass
+    video.hdmi_out.writeframe(out_frame)
+
+
+video.start = video_start
+video.process_frame = process_frame
 
     """.format(**args)
 
