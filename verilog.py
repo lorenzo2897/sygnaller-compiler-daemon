@@ -24,6 +24,7 @@ def template(args):
     (
         // Users to add ports here
         input wire [31:0] video_in,
+        input wire video_in_ready,
         input wire [31:0] video_x,
         input wire [31:0] video_y,
         output wire [31:0] video_out,
@@ -427,6 +428,8 @@ def create_wrapper(component_spec: ComponentSpec, verilog_sources):
             user_logic_args.append(f'module_output{i+1}')
         elif p.port_type == 'video in':
             user_logic_args.append(f'video_in')
+        elif p.port_type == 'video ready':
+            user_logic_args.append(f'video_in_ready')
         elif p.port_type == 'video x':
             user_logic_args.append(f'video_x')
         elif p.port_type == 'video y':

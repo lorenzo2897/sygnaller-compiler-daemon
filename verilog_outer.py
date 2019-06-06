@@ -20,6 +20,7 @@ module {component_name}_v1_0 #
 (
     // Users to add ports here
     input wire [31:0] video_in,
+    input wire video_in_ready,
     input wire [31:0] video_x,
     input wire [31:0] video_y,
     output wire [31:0] video_out,
@@ -56,6 +57,7 @@ module {component_name}_v1_0 #
     .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH)
     ) {component_name}_v1_0_S00_AXI_inst (
     .video_in(video_in),
+    .video_in_ready(video_in_ready),
     .video_x(video_x),
     .video_y(video_y),
     .video_out(video_out),

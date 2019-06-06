@@ -70,6 +70,7 @@ open_bd_design {./base.srcs/sources_1/bd/base/base.bd}
 create_bd_cell -type ip -vlnv xilinx.com:user:${component_name}:1.0 ${component_name}_0
 apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { Clk_master {/ps7_0/FCLK_CLK0 (100 MHz)} Clk_slave {Auto} Clk_xbar {/ps7_0/FCLK_CLK0 (100 MHz)} Master {/ps7_0/M_AXI_GP0} Slave {/${component_name}_0/S00_AXI} intc_ip {/ps7_0_axi_periph} master_apm {0}}  [get_bd_intf_pins ${component_name}_0/S00_AXI]""")
         self._tcl('connect_bd_net [get_bd_pins ${component_name}_0/video_in] [get_bd_pins sygnaller_dma_0/vin]')
+        self._tcl('connect_bd_net [get_bd_pins ${component_name}_0/video_in_ready] [get_bd_pins sygnaller_dma_0/vin_ap_vld]')
         self._tcl('connect_bd_net [get_bd_pins ${component_name}_0/video_x] [get_bd_pins sygnaller_dma_0/x]')
         self._tcl('connect_bd_net [get_bd_pins ${component_name}_0/video_y] [get_bd_pins sygnaller_dma_0/y]')
         if bind_video_out:
