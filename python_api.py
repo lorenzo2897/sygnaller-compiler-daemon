@@ -110,7 +110,7 @@ ip = _overlay.sygnaller_dma_0
 fno = 0
 
 
-def process_frame(in_frame=None, out_frame=None, latency=0):
+def process_frame(callback=None, in_frame=None, out_frame=None, latency=0):
     global fno, img_in, img_out
     
     if in_frame is None:
@@ -119,22 +119,26 @@ def process_frame(in_frame=None, out_frame=None, latency=0):
     if out_frame is None:
         out_frame = video.hdmi_out.newframe()
     
-    ip.write(0x10, in_frame.physical_address)
-    ip.write(0x18, out_frame.physical_address)
-    ip.write(0x20, 1280)
-    ip.write(0x28, 720)
-    ip.write(0x30, latency)
-    ip.write(0x00, 0x01)  # ap_start
+    if callback is None:
+        ip.write(0x10, in_frame.physical_address)
+        ip.write(0x18, out_frame.physical_address)
+        ip.write(0x20, 1280)
+        ip.write(0x28, 720)
+        ip.write(0x30, latency)
+        ip.write(0x00, 0x01)  # ap_start
 
     fno += 1
-    if fno >= 60:
+    if fno >= 30:
         img_in = PIL.Image.fromarray(in_frame).convert('RGB')
         pass
 
-    while (ip.read(0) & 0x4) == 0:  # ap_ready
-        pass
+    if callback is None:
+        while (ip.read(0) & 0x4) == 0:  # ap_ready
+            pass
+    else:
+        callback(in_frame, out_frame)
     
-    if fno >= 60:
+    if fno >= 30:
         img_out = PIL.Image.fromarray(out_frame).convert('RGB')
         save_image_signal.set()
         fno = 0
