@@ -23,6 +23,8 @@ def write_cache(project_id, component_names):
 def clear_cache(project_id):
     try:
         os.remove(cache_dir + project_id + "/cache.json")
+        import shutil
+        shutil.rmtree(cache_dir + project_id, True)
     except OSError:
         pass
 
