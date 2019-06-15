@@ -1,4 +1,5 @@
 import json
+from component import ComponentSpec
 
 
 def template(args):
@@ -152,7 +153,7 @@ video.process_frame = process_frame
     """.format(**args)
 
 
-def make_python_api(components):
+def _build_component_list(components):
     component_list = []
 
     for c in components:
@@ -165,9 +166,45 @@ def make_python_api(components):
                 outputs[p.name] = (i+1) * 4
         component_list.append(f"{c.name} = Component(_overlay.{c.name}_0, {json.dumps(inputs)}, {json.dumps(outputs)})")
 
-    return template({"component_list": '\n'.join(component_list)})
+    return component_list
+
+
+def make_python_api(components):
+    return template({"component_list": '\n'.join(_build_component_list(components))})
 
 
 def write_python_api_to_file(components, filepath):
     with open(filepath, 'w') as f:
         f.write(make_python_api(components))
+
+
+# *****************************************
+# Unit tests
+# *****************************************
+
+import unittest
+
+
+class TestPythonApi(unittest.TestCase):
+
+    def test_empty(self):
+        c = ComponentSpec("myname", [])
+        a = _build_component_list([c])
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a[0], "myname = Component(_overlay.myname_0, {}, {})")
+
+    def test_inputs(self):
+        c = ComponentSpec("myname", [{"name": "i", "type": "input"}])
+        a = _build_component_list([c])
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a[0], "myname = Component(_overlay.myname_0, {\"i\": 4}, {})")
+
+    def test_outputs(self):
+        c = ComponentSpec("myname", [{"name": "o", "type": "output"}])
+        a = _build_component_list([c])
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a[0], "myname = Component(_overlay.myname_0, {}, {\"o\": 4})")
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -176,3 +176,61 @@ exit 0""")
 
     def __str__(self):
         return self._tcl_string
+
+
+# *****************************************
+# Unit tests
+# *****************************************
+
+import unittest
+
+
+class TestTcl(unittest.TestCase):
+
+    def test_init(self):
+        tcl = TclScript("/")
+        self.assertGreater(len(tcl._tcl_string), 0)
+
+    def test_create(self):
+        tcl = TclScript("/")
+        len0 = len(tcl._tcl_string)
+        tcl.create_IP("name", 4)
+        len1 = len(tcl._tcl_string)
+        self.assertGreater(len1, len0)
+
+    def test_add(self):
+        tcl = TclScript("/")
+        len0 = len(tcl._tcl_string)
+        tcl.add_IP("name", False)
+        len1 = len(tcl._tcl_string)
+        self.assertGreater(len1, len0)
+
+    def test_edit(self):
+        tcl = TclScript("/")
+        len0 = len(tcl._tcl_string)
+        tcl.edit_IP("name", "path")
+        len1 = len(tcl._tcl_string)
+        self.assertGreater(len1, len0)
+
+    def test_delete(self):
+        tcl = TclScript("/")
+        len0 = len(tcl._tcl_string)
+        tcl.delete_IP("name")
+        len1 = len(tcl._tcl_string)
+        self.assertGreater(len1, len0)
+
+    def test_compile(self):
+        tcl = TclScript("/")
+        len0 = len(tcl._tcl_string)
+        tcl.compile()
+        len1 = len(tcl._tcl_string)
+        self.assertGreater(len1, len0)
+
+    def test_str(self):
+        tcl = TclScript("/")
+        self.assertGreater(len(str(tcl)), 0)
+        self.assertEqual(str(tcl), tcl._tcl_string)
+
+
+if __name__ == '__main__':
+    unittest.main()

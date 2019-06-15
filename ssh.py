@@ -74,3 +74,47 @@ def intercept_log(line, log_queue):
     elif line.startswith('Implementation complete'):
         log_queue.progress = 90
     pass
+
+
+# *****************************************
+# Unit tests
+# *****************************************
+
+import unittest
+
+
+class TestSsh(unittest.TestCase):
+
+    def test_intercept_log(self):
+        q = Queue()
+        q.progress = 0
+        intercept_log("[time] Launched synth_1...", q)
+        self.assertEqual(q.progress, 30)
+        intercept_log("Synthesis complete (time)", q)
+        self.assertEqual(q.progress, 40)
+
+    def test_remote_exec(self):
+        command = 'echo hello'
+        out_queue = Queue()
+        kill_event = Event()
+        done_event = Event()
+        remote_exec(command, out_queue, kill_event, done_event, False)
+        self.assertTrue(done_event.is_set())
+        self.assertFalse(out_queue.empty())
+        o = ""
+        while o != "hello\n":
+            o = out_queue.get_nowait()
+        self.assertEqual(done_event.returncode, 0)
+
+    def test_remote_error(self):
+        command = 'false'
+        out_queue = Queue()
+        kill_event = Event()
+        done_event = Event()
+        remote_exec(command, out_queue, kill_event, done_event, False)
+        self.assertTrue(done_event.is_set())
+        self.assertEqual(done_event.returncode, 1)
+
+
+if __name__ == '__main__':
+    unittest.main()

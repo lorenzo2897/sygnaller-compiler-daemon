@@ -1,4 +1,5 @@
 import math
+from component import ComponentSpec
 
 
 def template(args):
@@ -88,11 +89,55 @@ endmodule
 """.format(**args)
 
 
-def create_wrapper(component_spec):
+def template_args(component_spec):
     log_count = math.ceil(math.log2(max(4, component_spec.register_count())))
     axi_address_width = log_count + 2
 
-    return template({
+    return {
         "component_name": component_spec.name,
         "axi_address_width": axi_address_width
-    })
+    }
+
+
+def create_wrapper(component_spec):
+    return template(template_args(component_spec))
+
+
+# *****************************************
+# Unit tests
+# *****************************************
+
+import unittest
+
+
+class TestVerilogOuter(unittest.TestCase):
+
+    def test_axi_width1(self):
+        c = ComponentSpec("name", [
+            {"name": f"p{i}", "type": "input"} for i in range(2)
+        ])
+        a = template_args(c)
+        self.assertEqual(a["axi_address_width"], 4)
+
+    def test_axi_width2(self):
+        c = ComponentSpec("name", [
+            {"name": f"p{i}", "type": "input"} for i in range(5)
+        ])
+        a = template_args(c)
+        self.assertEqual(a["axi_address_width"], 5)
+
+    def test_axi_width3(self):
+        c = ComponentSpec("name", [
+            {"name": f"p{i}", "type": "input"} for i in range(10)
+        ])
+        a = template_args(c)
+        self.assertEqual(a["axi_address_width"], 6)
+
+    def test_name(self):
+        c = ComponentSpec("myname", [])
+        a = template_args(c)
+        self.assertEqual(a["component_name"], "myname")
+
+
+if __name__ == '__main__':
+    unittest.main()

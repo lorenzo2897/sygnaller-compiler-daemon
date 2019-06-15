@@ -118,3 +118,69 @@ def get_overlay_modified_date(project_id):
         return max(os.path.getmtime(bitfile), os.path.getmtime(tclfile))
     else:
         return 0
+
+
+# *****************************************
+# Unit tests
+# *****************************************
+
+import unittest
+
+
+class TestCache(unittest.TestCase):
+    test_id = '_test_dummy'
+
+    def test_exists(self):
+        import shutil
+        shutil.rmtree(cache_dir + self.test_id, True)
+        self.assertFalse(project_exists(self.test_id))
+
+    def test_create(self):
+        import shutil
+        shutil.rmtree(cache_dir + self.test_id, True)
+        write_cache(self.test_id, [])
+        self.assertTrue(project_exists(self.test_id))
+
+    def test_write_read(self):
+        components = [
+            {"name": "c1"},
+            {"name": "c1"}
+        ]
+        write_cache(self.test_id, components)
+        self.assertEqual(components, cached_components(self.test_id))
+
+    def test_clear(self):
+        write_cache(self.test_id, [])
+        self.assertTrue(project_exists(self.test_id))
+        clear_cache(self.test_id)
+        self.assertFalse(project_exists(self.test_id))
+
+    def test_axi_write(self):
+        write_axi_wrapper(self.test_id, 'testwrap', 'blah')
+        fp = os.path.join(get_wrappers_dir(self.test_id), 'testwrap')
+        self.assertTrue(os.path.exists(fp))
+        clear_axi_wrappers(self.test_id)
+        self.assertFalse(os.path.exists(fp))
+
+    def test_axi_outer_write(self):
+        write_outer_axi_wrapper(self.test_id, 'testwrap', 'blah')
+        fp = os.path.join(get_wrappers_dir(self.test_id), 'testwrap.outer')
+        self.assertTrue(os.path.exists(fp))
+        clear_axi_wrappers(self.test_id)
+        self.assertFalse(os.path.exists(fp))
+
+    def test_source_mapping(self):
+        m = {"a": "b"}
+        write_cache(self.test_id, [])
+        put_source_mapping(self.test_id, m)
+        self.assertEqual(get_source_mapping(self.test_id), m)
+
+    def test_source_mapping_missing(self):
+        self.assertEqual(get_source_mapping('_not_exists'), [])
+
+    def test_modified_date_missing(self):
+        self.assertEqual(get_overlay_modified_date('_not_exists'), 0)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -2,7 +2,7 @@
 class PortSpec:
     def __init__(self, name: str, port_type: str):
         self.name = name
-        self.port_type = port_type  # clock, input, output, scope
+        self.port_type = port_type  # clock, input, output, scope, video in, video x, video y, video ready, video out
 
 
 class ComponentSpec:
@@ -30,3 +30,76 @@ class ComponentSpec:
 
 # register 0 is the scope
 # register n corresponds to the (n-1)th port on the module
+
+
+# *****************************************
+# Unit tests
+# *****************************************
+
+import unittest
+
+
+class TestComponent(unittest.TestCase):
+
+    def test_init(self):
+        c = ComponentSpec("name", [
+            {"name": "p1", "type": "input"},
+            {"name": "p2", "type": "output"}
+        ])
+        self.assertEqual(c.name, "name")
+        self.assertEqual(len(c.port_list), 2)
+        self.assertEqual(c.port_list[0].name, "p1")
+        self.assertEqual(c.port_list[1].port_type, "output")
+
+    def test_count1(self):
+        c = ComponentSpec("name", [
+            {"name": "p1", "type": "input"},
+            {"name": "p2", "type": "output"}
+        ])
+        self.assertEqual(c.register_count(), 4)
+
+    def test_count2(self):
+        c = ComponentSpec("name", [
+            {"name": "p1", "type": "input"},
+            {"name": "p2", "type": "output"},
+            {"name": "p3", "type": "output"},
+            {"name": "p4", "type": "output"}
+        ])
+        self.assertEqual(c.register_count(), 5)
+
+    def test_scope_port(self):
+        c = ComponentSpec("name", [
+            {"name": "p1", "type": "input"}
+        ])
+        self.assertFalse(c.has_scope_port())
+        c = ComponentSpec("name", [
+            {"name": "p1", "type": "scope"}
+        ])
+        self.assertTrue(c.has_scope_port())
+
+    def test_video_port(self):
+        c = ComponentSpec("name", [
+            {"name": "p1", "type": "input"}
+        ])
+        self.assertFalse(c.has_video_out_port())
+        c = ComponentSpec("name", [
+            {"name": "p1", "type": "video out"}
+        ])
+        self.assertTrue(c.has_video_out_port())
+
+    def test_output(self):
+        c = ComponentSpec("name", [
+            {"name": "p1", "type": "input"},
+            {"name": "p2", "type": "output"},
+            {"name": "p3", "type": "scope"},
+            {"name": "p4", "type": "output"}
+        ])
+        self.assertFalse(c.is_output(0))
+        self.assertTrue(c.is_output(1))
+        self.assertFalse(c.is_output(2))
+        self.assertTrue(c.is_output(3))
+        self.assertFalse(c.is_output(4))
+
+
+if __name__ == '__main__':
+    unittest.main()
